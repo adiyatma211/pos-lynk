@@ -1,8 +1,14 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7faf4;
+  --foreground: #1f2a1a;
+  --color-primary: #5e8c52;
+  --color-primary-strong: #4a6f41;
+  --color-secondary: #a1b986;
+  --color-secondary-soft: #dae6cf;
+  --card-border: #dbe7d3;
+  --text-muted: #5f6d52;
 }
 
 @theme inline {
@@ -14,13 +20,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f1910;
+    --foreground: #eef3ea;
   }
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(161, 185, 134, 0.3), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(94, 140, 82, 0.2), transparent 40%),
+    linear-gradient(180deg, #f9fbf5, #edf4e7);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
+
