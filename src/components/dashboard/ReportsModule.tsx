@@ -21,28 +21,28 @@ export function ReportsModule({
   setSelectedTransactionId,
 }: ReportsModuleProps) {
   return (
-    <section className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
+    <section className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-8 shadow-lg shadow-[#5e8c520a] min-h-[400px]">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--foreground)]">Riwayat Transaksi</h2>
-          <p className="text-sm text-[var(--text-muted)]">Filter berdasarkan tanggal atau pilih rentang singkat.</p>
+          <h2 className="text-3xl font-semibold text-[var(--foreground)]">Riwayat Transaksi</h2>
+          <p className="text-base text-[var(--text-muted)]">Filter berdasarkan tanggal atau pilih rentang singkat.</p>
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
-          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("today")}>
+          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("today")}>
             Hari ini
           </button>
-          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("week")}>
+          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("week")}>
             7 hari
           </button>
-          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("month")}>
+          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("month")}>
             Bulan ini
           </button>
-          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("all")}>
+          <button type="button" className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm text-[var(--text-muted)] transition hover:bg-[var(--color-secondary)]/30" onClick={() => quickFilter("all")}>
             Semua
           </button>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-sm">
+      <div className="mt-3 flex flex-wrap gap-2 text-base">
         <input
           type="date"
           className="rounded-xl border border-[var(--card-border)] bg-white/85 px-3 py-2 focus:border-[var(--color-primary)] focus:outline-none"
@@ -57,7 +57,7 @@ export function ReportsModule({
         />
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[600px] text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-base">
           <thead>
             <tr className="text-[color:rgba(95,109,82,0.7)]">
               <th className="px-2 py-2">Tanggal</th>
@@ -86,7 +86,7 @@ export function ReportsModule({
                 <td className="px-2 py-3">{currency(transaction.paid)}</td>
                 <td className="px-2 py-3">{currency(transaction.change)}</td>
                 <td className="px-2 py-3 text-right">
-                  <button type="button" className="text-sm text-[var(--color-primary)]" onClick={() => setSelectedTransactionId(transaction.id)}>
+                  <button type="button" className="text-base text-[var(--color-primary)]" onClick={() => setSelectedTransactionId(transaction.id)}>
                     Detail
                   </button>
                 </td>

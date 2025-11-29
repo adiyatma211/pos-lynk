@@ -1,5 +1,5 @@
 export type Category = {
-  id: string;
+  id: number;
   name: string;
   createdAt: string;
 };
@@ -8,7 +8,7 @@ export type Product = {
   id: string;
   name: string;
   price: number;
-  categoryId: string;
+  categoryId: number;
   stock: number;
   photo?: string;
   createdAt: string;

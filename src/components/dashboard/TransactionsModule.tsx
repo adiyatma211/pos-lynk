@@ -26,6 +26,7 @@ interface TransactionsModuleProps {
   currency: (value: number) => string;
   transactionCategoryFilter: string;
   setTransactionCategoryFilter: Dispatch<SetStateAction<string>>;
+  isSavingTransaction: boolean;
 }
 
 export function TransactionsModule({
@@ -52,6 +53,7 @@ export function TransactionsModule({
   currency,
   transactionCategoryFilter,
   setTransactionCategoryFilter,
+  isSavingTransaction,
 }: TransactionsModuleProps) {
   const [categoryPage, setCategoryPage] = useState(1);
   const pageSize = 4;
@@ -77,19 +79,19 @@ export function TransactionsModule({
   };
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+    <section className="flex flex-col gap-6 lg:flex lg:flex-row lg:gap-6">
       <div className="space-y-6">
-        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
+        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-8 shadow-lg shadow-[#5e8c520a] min-h-[250px] lg:min-h-[300px] lg:p-10">
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Langkah 1</p>
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">Pilih Produk</h2>
-            <p className="text-sm text-[var(--text-muted)]">Pilih kategori terlebih dahulu lalu cari produk yang ingin ditambahkan.</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Langkah 1</p>
+            <h2 className="text-3xl font-semibold text-[var(--foreground)]">Pilih Produk</h2>
+            <p className="text-base text-[var(--text-muted)]">Pilih kategori terlebih dahulu lalu cari produk yang ingin ditambahkan.</p>
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:gap-6">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-[var(--text-muted)]">Filter kategori</label>
+              <label className="text-sm font-medium text-[var(--text-muted)]">Filter kategori</label>
               <select
-                className="rounded-xl border border-[var(--card-border)] bg-white/85 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none"
+                className="rounded-xl border border-[var(--card-border)] bg-white/85 px-4 py-3 text-base focus:border-[var(--color-primary)] focus:outline-none"
                 value={transactionCategoryFilter}
                 onChange={(event) => setTransactionCategoryFilter(event.target.value)}
               >
@@ -102,11 +104,11 @@ export function TransactionsModule({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-[var(--text-muted)]">Cari produk</label>
+              <label className="text-sm font-medium text-[var(--text-muted)]">Cari produk</label>
               <input
                 type="search"
                 placeholder="Cari produk untuk ditambahkan"
-                className="rounded-xl border border-[var(--card-border)] bg-white/85 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none"
+                className="rounded-xl border border-[var(--card-border)] bg-white/85 px-4 py-3 text-base focus:border-[var(--color-primary)] focus:outline-none"
                 value={transactionSearch}
                 onChange={(event) => setTransactionSearch(event.target.value)}
               />
@@ -114,22 +116,22 @@ export function TransactionsModule({
           </div>
 
           {transactionSearch && (
-            <div className="mt-4 rounded-2xl border border-[var(--color-primary)]/30 bg-[var(--color-secondary)]/25 p-3 text-sm text-[var(--text-muted)]">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-primary)]">Hasil pencarian</p>
+            <div className="mt-4 rounded-2xl border border-[var(--color-primary)]/30 bg-[var(--color-secondary)]/25 p-4 text-base text-[var(--text-muted)]">
+              <p className="text-sm uppercase tracking-wide text-[var(--color-primary)]">Hasil pencarian</p>
               {matchingProducts.length === 0 && <p className="mt-2 text-[var(--text-muted)]">Tidak ada produk yang cocok.</p>}
-              <div className="mt-2 grid gap-2">
+              <div className="mt-3 grid gap-3">
                 {matchingProducts.map((product) => (
                   <button
                     key={product.id}
                     type="button"
-                    className="flex items-center justify-between rounded-xl bg-white/95 px-3 py-2 text-left shadow-sm transition hover:shadow-md"
+                    className="flex items-center justify-between rounded-xl bg-white/95 px-4 py-3 text-left shadow-sm transition hover:shadow-md"
                     onClick={() => handleAddToCart(product.id)}
                   >
                     <span>
                       {product.name}
-                      <span className="ml-2 text-xs text-[color:rgba(95,109,82,0.7)]">Stok {product.stock}</span>
+                      <span className="ml-2 text-sm text-[color:rgba(95,109,82,0.7)]">Stok {product.stock}</span>
                     </span>
-                    <span className="text-sm font-semibold text-[var(--foreground)]">{currency(product.price)}</span>
+                    <span className="text-base font-semibold text-[var(--foreground)]">{currency(product.price)}</span>
                   </button>
                 ))}
               </div>
@@ -137,31 +139,31 @@ export function TransactionsModule({
           )}
 
           <div className="mt-4 space-y-3">
-            {currentPageItems.length === 0 && <p className="text-sm text-[var(--text-muted)]">Belum ada kategori.</p>}
+            {currentPageItems.length === 0 && <p className="text-base text-[var(--text-muted)]">Belum ada kategori.</p>}
             {currentPageItems.map((item) => (
               <div key={item.id} className="rounded-2xl border border-[var(--card-border)] bg-[var(--color-secondary)]/20 p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--foreground)]">{item.name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{item.products.length} produk</p>
+                    <p className="text-base font-semibold text-[var(--foreground)]">{item.name}</p>
+                    <p className="text-sm text-[var(--text-muted)]">{item.products.length} produk</p>
                   </div>
                   <button
                     type="button"
-                    className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs"
+                    className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm"
                     onClick={() => setTransactionCategoryFilter(item.id)}
                   >
                     Pilih
                   </button>
                 </div>
                 {item.products.length === 0 ? (
-                  <p className="mt-2 text-xs text-[color:rgba(95,109,82,0.7)]">Belum ada produk dalam kategori ini.</p>
+                  <p className="mt-2 text-sm text-[color:rgba(95,109,82,0.7)]">Belum ada produk dalam kategori ini.</p>
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {item.products.slice(0, 4).map((product) => (
                       <button
                         key={product.id}
                         type="button"
-                        className="rounded-full border border-[var(--card-border)] px-3 py-1 text-xs text-[var(--text-muted)] hover:border-[var(--color-primary)]"
+                        className="rounded-full border border-[var(--card-border)] px-3 py-1 text-sm text-[var(--text-muted)] hover:border-[var(--color-primary)]"
                         onClick={() => handleAddToCart(product.id)}
                       >
                         {product.name}
@@ -171,7 +173,7 @@ export function TransactionsModule({
                 )}
               </div>
             ))}
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+            <div className="flex items-center justify-between text-sm text-[var(--text-muted)]">
               <button
                 type="button"
                 className="rounded-full border border-[var(--card-border)] px-2 py-1"
@@ -197,15 +199,15 @@ export function TransactionsModule({
       </div>
 
       <div className="space-y-6">
-        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
+        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-8 shadow-lg shadow-[#5e8c520a] min-h-[250px] lg:min-h-[300px] lg:p-10">
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Langkah 2</p>
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">Ringkasan Pesanan</h2>
-            <p className="text-sm text-[var(--text-muted)]">Atur qty, cek subtotal, lalu simpan transaksi.</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Langkah 2</p>
+            <h2 className="text-3xl font-semibold text-[var(--foreground)]">Ringkasan Pesanan</h2>
+            <p className="text-base text-[var(--text-muted)]">Atur qty, cek subtotal, lalu simpan transaksi.</p>
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[500px] text-left text-sm">
+            <table className="w-full min-w-[500px] text-left text-base">
               <thead>
                 <tr className="text-[color:rgba(95,109,82,0.7)]">
                   <th className="px-2 py-2">Produk</th>
@@ -251,13 +253,13 @@ export function TransactionsModule({
                           +
                         </button>
                       </div>
-                      <p className="text-xs text-[color:rgba(95,109,82,0.7)]">
+                      <p className="text-sm text-[color:rgba(95,109,82,0.7)]">
                         Maks {products.find((product) => product.id === item.productId)?.stock ?? 0}
                       </p>
                     </td>
                     <td className="px-2 py-3 text-right font-semibold">{currency(item.price * item.qty)}</td>
                     <td className="px-2 py-3 text-right">
-                      <button type="button" className="text-sm text-red-500" onClick={() => removeCartItem(item.productId)}>
+                      <button type="button" className="text-base text-red-500" onClick={() => removeCartItem(item.productId)}>
                         Hapus
                       </button>
                     </td>
@@ -267,13 +269,13 @@ export function TransactionsModule({
             </table>
           </div>
 
-          <div className="mt-4 grid gap-4 rounded-2xl border border-[var(--card-border)] bg-[var(--color-secondary)]/25 px-4 py-4 text-sm shadow-inner shadow-[#5e8c520f]">
+          <div className="mt-4 grid gap-4 rounded-2xl border border-[var(--card-border)] bg-[var(--color-secondary)]/25 px-4 py-4 text-base shadow-inner shadow-[#5e8c520f]">
             <div className="flex items-center justify-between">
               <p>Subtotal</p>
               <p className="text-lg font-semibold">{currency(cartSubtotal)}</p>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <label className="text-sm text-[var(--text-muted)]" htmlFor="cash">
+              <label className="text-base text-[var(--text-muted)]" htmlFor="cash">
                 Tunai
               </label>
               <input
@@ -284,7 +286,7 @@ export function TransactionsModule({
                 onChange={(event) => setCash(event.target.value)}
               />
               <div className="text-right">
-                <p className="text-xs text-[color:rgba(95,109,82,0.7)]">Kembalian</p>
+                <p className="text-sm text-[color:rgba(95,109,82,0.7)]">Kembalian</p>
                 <p className={`text-lg font-semibold ${change < 0 ? "text-red-500" : "text-[var(--color-primary)]"}`}>
                   {currency(Math.max(change, 0))}
                 </p>
@@ -292,26 +294,27 @@ export function TransactionsModule({
             </div>
             <button
               type="button"
-              className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-2 text-base font-semibold text-white shadow-lg shadow-[#5e8c520f] transition hover:bg-[#4f7846]"
+              className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-2 text-base font-semibold text-white shadow-lg shadow-[#5e8c520f] transition hover:bg-[#4f7846] disabled:cursor-not-allowed disabled:opacity-70"
               onClick={handleSaveTransaction}
+              disabled={isSavingTransaction}
             >
-              Simpan & Cetak Struk
+              {isSavingTransaction ? "Menyimpan..." : "Simpan & Cetak Struk"}
             </button>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
-          <h2 className="text-xl font-semibold text-[var(--foreground)]">Riwayat Stok</h2>
-          <p className="text-sm text-[var(--text-muted)]">Perubahan stok otomatis dicatat.</p>
+        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-8 shadow-lg shadow-[#5e8c520a] min-h-[250px] lg:min-h-[300px] lg:p-10">
+          <h2 className="text-3xl font-semibold text-[var(--foreground)]">Riwayat Stok</h2>
+          <p className="text-base text-[var(--text-muted)]">Perubahan stok otomatis dicatat.</p>
           <div className="mt-4 space-y-3">
-            {stockLogs.length === 0 && <p className="text-sm text-[var(--text-muted)]">Belum ada perubahan stok.</p>}
+            {stockLogs.length === 0 && <p className="text-base text-[var(--text-muted)]">Belum ada perubahan stok.</p>}
             {stockLogs.slice(0, 5).map((log) => (
-              <div key={log.id} className="rounded-xl border border-[var(--card-border)] bg-[var(--color-secondary)]/20 px-3 py-2 text-sm">
+              <div key={log.id} className="rounded-xl border border-[var(--card-border)] bg-[var(--color-secondary)]/20 px-3 py-2 text-base">
                 <p className="font-medium text-[var(--foreground)]">{productNameById(log.productId)}</p>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   {log.note} • {formatDateTime(log.createdAt)}
                 </p>
-                <p className={`text-sm font-semibold ${log.type === "out" ? "text-red-500" : "text-[var(--color-primary)]"}`}>
+                <p className={`text-base font-semibold ${log.type === "out" ? "text-red-500" : "text-[var(--color-primary)]"}`}>
                   {log.type === "out" ? "-" : "+"}
                   {log.amount} pcs
                 </p>
@@ -320,11 +323,11 @@ export function TransactionsModule({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
-          <h2 className="text-xl font-semibold text-[var(--foreground)]">Detail Transaksi</h2>
-          {!selectedTransaction && <p className="mt-2 text-sm text-[var(--text-muted)]">Pilih transaksi untuk melihat detail.</p>}
+        <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-8 shadow-lg shadow-[#5e8c520a] min-h-[250px] lg:min-h-[300px] lg:p-10">
+          <h2 className="text-3xl font-semibold text-[var(--foreground)]">Detail Transaksi</h2>
+          {!selectedTransaction && <p className="mt-2 text-base text-[var(--text-muted)]">Pilih transaksi untuk melihat detail.</p>}
           {selectedTransaction && (
-            <div className="mt-3 space-y-3 text-sm">
+            <div className="mt-3 space-y-3 text-base">
               <div>
                 <p className="text-[var(--text-muted)]">ID Transaksi</p>
                 <p className="font-semibold">{selectedTransaction.id}</p>
@@ -335,7 +338,7 @@ export function TransactionsModule({
               </div>
               <div className="rounded-xl bg-[var(--color-secondary)]/20 p-3">
                 {selectedTransaction.items.map((item) => (
-                  <div key={item.productId} className="flex justify-between text-sm">
+                  <div key={item.productId} className="flex justify-between text-base">
                     <p>
                       {item.name} x{item.qty}
                     </p>
@@ -345,7 +348,7 @@ export function TransactionsModule({
               </div>
               <div>
                 <p>Total Belanja</p>
-                <p className="text-xl font-semibold">{currency(selectedTransaction.total)}</p>
+                <p className="text-3xl font-semibold">{currency(selectedTransaction.total)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button

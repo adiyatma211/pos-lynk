@@ -15,7 +15,11 @@ import type {
   TransactionItem,
 } from "@/types/pos";
 import { jsPDF } from "jspdf";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createTransaction, fetchStockLogs, fetchTransactions } from "@/lib/transactions";
+import { fetchDashboardSummary, setDashboardRefreshCallback } from "@/lib/dashboard";
+import { fetchCategories, createCategory, updateCategory, deleteCategory } from "@/lib/categories";
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from "@/lib/products";
 const storageKeys = {
   categories: "poslynk-categories",
   products: "poslynk-products",
@@ -191,12 +195,22 @@ export default function Home() {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [activeModule, setActiveModule] = useState<ModuleKey>("omzet");
+  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
+  const [dashboardSummary, setDashboardSummary] = useState<{
+    todayTransactionsCount: number;
+    todayRevenue: number;
+    topProduct: string | null;
+    weeklyTrend: Array<{ label: string; total: number }>;
+    maxWeeklyTotal: number;
+    totalRevenue: number;
+    averageOrder: number;
+    totalTransactions: number;
+  } | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const defaultCategories: Category[] = [
       { id: generateId(), name: "Umum", createdAt: new Date().toISOString() },
     ];
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCategories(readFromStorage<Category[]>(storageKeys.categories, defaultCategories));
     setProducts(readFromStorage<Product[]>(storageKeys.products, []));
     setTransactions(readFromStorage<Transaction[]>(storageKeys.transactions, []));
@@ -225,8 +239,7 @@ export default function Home() {
   }, [stockLogs, isReady]);
 
   useEffect(() => {
-    if (!categories.length) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!Array.isArray(categories) || categories.length === 0) return;
     setProductForm((prev) => {
       if (prev.categoryId) return prev;
       return { ...prev, categoryId: categories[0].id };
@@ -238,11 +251,111 @@ export default function Home() {
     const timeout = window.setTimeout(() => setFlash(null), 4000);
     return () => window.clearTimeout(timeout);
   }, [flash]);
-  const triggerFlash = (type: FlashMessage["type"], text: string) => {
+  const triggerFlash = useCallback((type: FlashMessage["type"], text: string) => {
     setFlash({ type, text });
-  };
+  }, []);
+
+  const refreshTransactionsFromApi = useCallback(async () => {
+    try {
+      const remoteTransactions = await fetchTransactions();
+      setTransactions(remoteTransactions);
+    } catch (error) {
+      console.error("Failed to load transactions", error);
+      triggerFlash("error", "Gagal memuat data transaksi");
+    }
+  }, [triggerFlash]);
+
+  const refreshStockLogsFromApi = useCallback(async () => {
+    try {
+      const logs = await fetchStockLogs();
+      setStockLogs(logs);
+    } catch (error) {
+      console.error("Failed to load stock logs", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshTransactionsFromApi();
+    refreshStockLogsFromApi();
+  }, [refreshTransactionsFromApi, refreshStockLogsFromApi]);
+
+  const refreshDashboardSummary = useCallback(async () => {
+    try {
+      const summary = await fetchDashboardSummary();
+      setDashboardSummary(summary);
+    } catch (error) {
+      console.error("Failed to load dashboard summary", error);
+    }
+  }, []);
+
+  const refreshCategoriesFromApi = useCallback(async () => {
+    try {
+      const remoteCategories = await fetchCategories();
+      setCategories(remoteCategories);
+    } catch (error) {
+      console.error("Failed to load categories", error);
+      triggerFlash("error", "Gagal memuat data kategori");
+    }
+  }, [triggerFlash]);
+
+  // Refresh categories without triggerFlash dependency (to avoid infinite loops)
+  const refreshCategoriesFromApiSilently = useCallback(async () => {
+    try {
+      console.log('refreshCategoriesFromApiSilently called');
+      const remoteCategories = await fetchCategories();
+      console.log('Categories received from API:', remoteCategories);
+      
+      // Hanya set jika data valid dan berbeda
+      if (Array.isArray(remoteCategories) && remoteCategories.length > 0) {
+        console.log('Setting valid categories to state:', remoteCategories);
+        setCategories(remoteCategories);
+      } else {
+        console.log('Invalid or empty categories, keeping current state');
+      }
+      
+      // Log state after setCategories (delayed)
+      setTimeout(() => {
+        console.log('Categories state after setTimeout check');
+      }, 100);
+    } catch (error) {
+      console.error("Failed to load categories", error);
+    }
+  }, []);
+
+  const refreshProductsFromApi = useCallback(async () => {
+    try {
+      const remoteProducts = await fetchProducts();
+      setProducts(remoteProducts);
+    } catch (error) {
+      console.error("Failed to load products", error);
+      triggerFlash("error", "Gagal memuat data produk");
+    }
+  }, [triggerFlash]);
+
+  // Refresh products without triggerFlash dependency (to avoid infinite loops)
+  const refreshProductsFromApiSilently = useCallback(async () => {
+    try {
+      const remoteProducts = await fetchProducts();
+      setProducts(remoteProducts);
+    } catch (error) {
+      console.error("Failed to load products", error);
+    }
+  }, []);
+
+  // Register the callback for external triggers
+  useEffect(() => {
+    setDashboardRefreshCallback(() => refreshDashboardSummary);
+  }, [refreshDashboardSummary]);
+
+  // Load dashboard summary on mount
+  useEffect(() => {
+    refreshDashboardSummary();
+    refreshCategoriesFromApi();
+    refreshProductsFromApi();
+  }, [refreshDashboardSummary, refreshCategoriesFromApi, refreshProductsFromApi]);
 
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     return products.filter((product) => {
       const matchCategory = productFilter === "all" || product.categoryId === productFilter;
       const matchSearch = product.name.toLowerCase().includes(productSearch.toLowerCase());
@@ -345,58 +458,102 @@ export default function Home() {
     setEditingCategoryId(null);
   };
 
-  const upsertCategory = () => {
+  const upsertCategory = async () => {
     if (!categoryForm.name.trim()) {
       triggerFlash("error", "Nama kategori wajib diisi");
       return;
     }
-    if (editingCategoryId) {
-      setCategories((prev) =>
-        prev.map((category) =>
-          category.id === editingCategoryId ? { ...category, name: categoryForm.name.trim() } : category,
-        ),
-      );
-      triggerFlash("success", "Kategori diperbarui");
-    } else {
-      const exists = categories.some(
-        (category) => category.name.toLowerCase() === categoryForm.name.toLowerCase(),
-      );
-      if (exists) {
-        triggerFlash("info", "Kategori sudah tersedia");
-        return;
+    try {
+      if (editingCategoryId) {
+        const updatedCategory = await updateCategory(editingCategoryId, categoryForm.name.trim());
+        setCategories((prev) =>
+          prev.map((category) =>
+            category.id === editingCategoryId ? updatedCategory : category,
+          ),
+        );
+        // Refresh categories from API to ensure dropdown is updated
+        await refreshCategoriesFromApiSilently();
+        triggerFlash("success", "Kategori diperbarui");
+      } else {
+        const exists = Array.isArray(categories) && categories.some(
+          (category) => category.name.toLowerCase() === categoryForm.name.toLowerCase(),
+        );
+        if (exists) {
+          triggerFlash("info", "Kategori sudah tersedia");
+          return;
+        }
+
+        // Coba simpan dan tangani error duplikasi
+        try {
+          const newCategory = await createCategory(categoryForm.name.trim());
+          // Refresh categories from API to ensure dropdown is updated
+          await refreshCategoriesFromApiSilently();
+          triggerFlash("success", "Kategori ditambahkan");
+        } catch (error) {
+          // Check apakah ini error duplikasi nama
+          if (error instanceof Error && error.message.toLowerCase().includes('already') || 
+              error.message.toLowerCase().includes('exists') ||
+              error.message.toLowerCase().includes('taken')) {
+            triggerFlash("info", "Nama kategori sudah digunakan");
+          } else {
+            console.error("Failed to create category", error);
+            triggerFlash(
+              "error",
+              error instanceof Error ? error.message : "Gagal menyimpan kategori",
+            );
+          }
+        }
+        // const newCategory = await createCategory(categoryForm.name.trim());
+        // setCategories((prev) => Array.isArray(prev) ? [...prev, newCategory] : [newCategory]);
+        // triggerFlash("success", "Kategori ditambahkan");
       }
-      setCategories((prev) => [
-        ...prev,
-        { id: generateId(), name: categoryForm.name.trim(), createdAt: new Date().toISOString() },
-      ]);
-      triggerFlash("success", "Kategori ditambahkan");
+      resetCategoryForm();
+    } catch (error) {
+      console.error("Failed to save category", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
+      triggerFlash(
+        "error",
+        error instanceof Error ? error.message : "Gagal menyimpan kategori",
+      );
     }
-    resetCategoryForm();
   };
 
   const handleEditCategory = (id: string) => {
-    const category = categories.find((item) => item.id === id);
+    const category = Array.isArray(categories) ? categories.find((item) => item.id === id) : null;
     if (!category) return;
     setCategoryForm({ name: category.name });
     setEditingCategoryId(category.id);
   };
 
-  const handleDeleteCategory = (id: string) => {
-    const used = products.some((product) => product.categoryId === id);
+  const handleDeleteCategory = async (id: string) => {
+    const used = Array.isArray(products) && products.some((product) => product.categoryId === id);
     if (used) {
       triggerFlash("error", "Kategori digunakan produk");
       return;
     }
-    if (categories.length <= 1) {
+    if (!Array.isArray(categories) || categories.length <= 1) {
       triggerFlash("info", "Minimal satu kategori aktif");
       return;
     }
-    setCategories((prev) => prev.filter((category) => category.id !== id));
-    triggerFlash("info", "Kategori dihapus");
-    if (editingCategoryId === id) resetCategoryForm();
+    try {
+      await deleteCategory(id);
+      setCategories((prev) => prev.filter((category) => category.id !== id));
+      triggerFlash("info", "Kategori dihapus");
+      if (editingCategoryId === id) resetCategoryForm();
+    } catch (error) {
+      console.error("Failed to delete category", error);
+      triggerFlash(
+        "error",
+        error instanceof Error ? error.message : "Gagal menghapus kategori",
+      );
+    }
   };
 
-  const upsertProduct = () => {
+  const upsertProduct = async () => {
     if (!productForm.name.trim()) {
       triggerFlash("error", "Nama produk wajib diisi");
       return;
@@ -415,42 +572,42 @@ export default function Home() {
       triggerFlash("error", "Pilih kategori");
       return;
     }
-    if (editingProductId) {
-      setProducts((prev) =>
-        prev.map((product) =>
-          product.id === editingProductId
-            ? {
-                ...product,
-                name: productForm.name.trim(),
-                price: priceValue,
-                categoryId: productForm.categoryId,
-                stock: stockValue,
-                photo: productForm.photo.trim(),
-              }
-            : product,
-        ),
-      );
-      triggerFlash("success", "Produk diperbarui");
-    } else {
-      setProducts((prev) => [
-        ...prev,
-        {
-          id: generateId(),
+    try {
+      if (editingProductId) {
+        const updatedProduct = await updateProduct(editingProductId, {
           name: productForm.name.trim(),
           price: priceValue,
-          categoryId: productForm.categoryId,
           stock: stockValue,
+          categoryId: productForm.categoryId,
           photo: productForm.photo.trim(),
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      triggerFlash("success", "Produk ditambahkan");
+        });
+        // Refresh products from API to ensure filter is updated
+        await refreshProductsFromApiSilently();
+        triggerFlash("success", "Produk diperbarui");
+      } else {
+        const newProduct = await createProduct({
+          name: productForm.name.trim(),
+          price: priceValue,
+          stock: stockValue,
+          categoryId: productForm.categoryId,
+          photo: productForm.photo.trim(),
+        });
+        // Refresh products from API to ensure filter is updated
+        await refreshProductsFromApiSilently();
+        triggerFlash("success", "Produk ditambahkan");
+      }
+      resetProductForm();
+    } catch (error) {
+      console.error("Failed to save product", error);
+      triggerFlash(
+        "error",
+        error instanceof Error ? error.message : "Gagal menyimpan produk",
+      );
     }
-    resetProductForm();
   };
 
   const handleEditProduct = (id: string) => {
-    const product = products.find((item) => item.id === id);
+    const product = Array.isArray(products) ? products.find((item) => item.id === id) : null;
     if (!product) return;
     setEditingProductId(product.id);
     setProductForm({
@@ -462,14 +619,24 @@ export default function Home() {
     });
   };
 
-  const handleDeleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id));
-    setCart((prev) => prev.filter((item) => item.productId !== id));
-    triggerFlash("info", "Produk dihapus");
-    if (editingProductId === id) resetProductForm();
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      // Refresh products from API to ensure filter is updated
+      await refreshProductsFromApiSilently();
+      setCart((prev) => prev.filter((item) => item.productId !== id));
+      triggerFlash("info", "Produk dihapus");
+      if (editingProductId === id) resetProductForm();
+    } catch (error) {
+      console.error("Failed to delete product", error);
+      triggerFlash(
+        "error",
+        error instanceof Error ? error.message : "Gagal menghapus produk",
+      );
+    }
   };
   const handleAddToCart = (productId: string) => {
-    const product = products.find((item) => item.id === productId);
+    const product = Array.isArray(products) ? products.find((item) => item.id === productId) : null;
     if (!product) {
       triggerFlash("error", "Produk tidak ditemukan");
       return;
@@ -479,6 +646,7 @@ export default function Home() {
       return;
     }
     setCart((prev) => {
+      if (!Array.isArray(prev)) return [{ productId: product.id, name: product.name, price: product.price, qty: 1 }];
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         if (existing.qty >= product.stock) {
@@ -489,7 +657,7 @@ export default function Home() {
           item.productId === product.id ? { ...item, qty: item.qty + 1 } : item,
         );
       }
-      return [...prev, { productId: product.id, name: product.name, price: product.price, qty: 1 }];
+      return Array.isArray(prev) ? [...prev, { productId: product.id, name: product.name, price: product.price, qty: 1 }] : [{ productId: product.id, name: product.name, price: product.price, qty: 1 }];
     });
     setTransactionSearch("");
   };
@@ -500,7 +668,7 @@ export default function Home() {
     if (Number.isNaN(qty)) return;
     const normalized = Math.floor(qty);
     if (normalized <= 0) {
-      setCart((prev) => prev.filter((item) => item.productId !== productId));
+      setCart((prev) => Array.isArray(prev) ? prev.filter((item) => item.productId !== productId) : []);
       return;
     }
     if (normalized > product.stock) {
@@ -508,21 +676,21 @@ export default function Home() {
       return;
     }
     setCart((prev) =>
-      prev.map((item) =>
+      Array.isArray(prev) ? prev.map((item) =>
         item.productId === productId
           ? {
               ...item,
               qty: normalized,
             }
           : item,
-      ),
+      ) : []
     );
   };
 
   const removeCartItem = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
+    setCart((prev) => Array.isArray(prev) ? prev.filter((item) => item.productId !== productId) : []);
   };
-  const handleSaveTransaction = () => {
+  const handleSaveTransaction = async () => {
     if (!cart.length) {
       triggerFlash("info", "Keranjang kosong");
       return;
@@ -532,39 +700,40 @@ export default function Home() {
       triggerFlash("error", "Tunai belum mencukupi");
       return;
     }
-    const now = new Date().toISOString();
-    const newTransaction: Transaction = {
-      id: `TRX-${now.replace(/\D/g, "").slice(-8)}`,
-      createdAt: now,
-      items: cart,
-      subtotal: cartSubtotal,
-      total: cartSubtotal,
-      paid: paidValue,
-      change: paidValue - cartSubtotal,
-    };
-    setTransactions((prev) => [newTransaction, ...prev]);
-    setProducts((prev) =>
-      prev.map((product) => {
-        const cartItem = cart.find((item) => item.productId === product.id);
-        if (!cartItem) return product;
-        return { ...product, stock: Math.max(product.stock - cartItem.qty, 0) };
-      }),
-    );
-    const logs = cart.map((item) => ({
-      id: generateId(),
-      productId: item.productId,
-      type: "out" as const,
-      amount: item.qty,
-      note: `Penjualan ${newTransaction.id}`,
-      createdAt: now,
-    }));
-    setStockLogs((prev) => [...logs, ...prev]);
-    setCart([]);
-    setCash("0");
-    setTransactionSearch("");
-    setSelectedTransactionId(newTransaction.id);
-    triggerFlash("success", "Transaksi tersimpan");
-    handleGenerateReceipt(newTransaction);
+    setIsSavingTransaction(true);
+    try {
+      const savedTransaction = await createTransaction({
+        items: cart.map((item) => ({ product_id: item.productId, qty: item.qty })),
+        paid: paidValue,
+      });
+
+      setTransactions((prev) => Array.isArray(prev) ? [savedTransaction, ...prev] : [savedTransaction]);
+      setProducts((prev) =>
+        prev.map((product) => {
+          const cartItem = cart.find((item) => item.productId === product.id);
+          if (!cartItem) return product;
+          return { ...product, stock: Math.max(product.stock - cartItem.qty, 0) };
+        }),
+      );
+      await refreshStockLogsFromApi();
+      await refreshDashboardSummary();
+      await refreshProductsFromApi();
+      await refreshCategoriesFromApi();
+      setCart([]);
+      setCash("0");
+      setTransactionSearch("");
+      setSelectedTransactionId(savedTransaction.id);
+      triggerFlash("success", "Transaksi tersimpan");
+      handleGenerateReceipt(savedTransaction);
+    } catch (error) {
+      console.error("Failed to save transaction", error);
+      triggerFlash(
+        "error",
+        error instanceof Error ? error.message : "Gagal menyimpan transaksi",
+      );
+    } finally {
+      setIsSavingTransaction(false);
+    }
   };
 
   const handleGenerateReceipt = (transaction: Transaction) => {
@@ -643,12 +812,12 @@ export default function Home() {
     }
   };
 
-  const productNameById = (id: string) => products.find((item) => item.id === id)?.name ?? "-";
+  const productNameById = (id: string) => Array.isArray(products) ? products.find((item) => item.id === id)?.name ?? "-" : "-";
   const activeNav = moduleNavItems.find((item) => item.key === activeModule);
 
   return (
-    <div className="min-h-screen py-12 text-[var(--foreground)]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 lg:flex-row">
+    <div className="min-h-screen py-12 text-[var(--foreground)] px-4 lg:px-8">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-8 px-4 lg:flex-row lg:px-8">
         <SidebarNav
           storeName={storeName}
           summaryText="Kelola transaksi, produk, laporan, dan omzet dari satu layar."
@@ -657,16 +826,16 @@ export default function Home() {
           activeModule={activeModule}
           onSelect={setActiveModule}
         />
-        <main className="flex-1 space-y-6">
-          <header className="rounded-3xl border border-[var(--card-border)] bg-white/80 px-6 py-5 shadow-sm shadow-[#5e8c520f]">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--color-primary)]">Modul aktif</p>
-            <h2 className="mt-1 text-3xl font-bold text-[var(--foreground)]">{activeNav?.label ?? "Omzet"}</h2>
-            <p className="text-sm text-[var(--text-muted)]">{activeNav?.description}</p>
+        <main className="flex-1 space-y-8">
+          <header className="rounded-3xl border border-[var(--card-border)] bg-white/80 px-8 py-6 shadow-sm shadow-[#5e8c520f]">
+            <p className="text-base font-semibold uppercase tracking-[0.3em] text-[var(--color-primary)]">Modul aktif</p>
+            <h2 className="mt-2 text-5xl font-bold text-[var(--foreground)]">{activeNav?.label ?? "Omzet"}</h2>
+            <p className="text-lg text-[var(--text-muted)]">{activeNav?.description}</p>
           </header>
 
           {flash && (
             <div
-              className={`rounded-2xl border px-4 py-3 text-sm shadow-sm transition ${
+              className={`rounded-2xl border px-8 py-6 text-lg shadow-sm transition ${
                 flash.type === "error"
                   ? "border-red-200 bg-red-50 text-red-700"
                   : flash.type === "success"
@@ -680,15 +849,15 @@ export default function Home() {
 
           {activeModule === "omzet" && (
             <OmzetModule
-              todayTransactionsCount={todayTransactions.length}
-              todayRevenue={todayRevenue}
-              topProduct={topProduct}
-              weeklyTrend={weeklyTrend}
-              maxWeeklyTotal={maxWeeklyTotal}
-              latestTransactions={latestTransactions}
-              totalRevenue={totalRevenue}
-              averageOrder={averageOrder}
-              totalTransactions={transactions.length}
+              todayTransactionsCount={dashboardSummary?.todayTransactionsCount ?? todayTransactions.length}
+              todayRevenue={dashboardSummary?.todayRevenue ?? todayRevenue}
+              topProduct={dashboardSummary?.topProduct ?? topProduct}
+              weeklyTrend={dashboardSummary?.weeklyTrend ?? weeklyTrend}
+              maxWeeklyTotal={dashboardSummary?.maxWeeklyTotal ?? maxWeeklyTotal}
+              latestTransactions={dashboardSummary?.latestTransactions ?? latestTransactions}
+              totalRevenue={dashboardSummary?.totalRevenue ?? totalRevenue}
+              averageOrder={dashboardSummary?.averageOrder ?? averageOrder}
+              totalTransactions={dashboardSummary?.totalTransactions ?? transactions.length}
               currency={currency}
               formatDateTime={formatDateTime}
             />
@@ -696,8 +865,11 @@ export default function Home() {
 
           {activeModule === "produk" && (
             <ProductsModule
-              categories={categories}
-              filteredProducts={filteredProducts}
+              categories={(() => {
+                console.log('Passing categories to ProductsModule:', categories);
+                return Array.isArray(categories) ? categories : [];
+              })()}
+              filteredProducts={Array.isArray(filteredProducts) ? filteredProducts : []}
               productFilter={productFilter}
               productSearch={productSearch}
               productForm={productForm}
@@ -736,6 +908,7 @@ export default function Home() {
               setCash={setCash}
               change={change}
               handleSaveTransaction={handleSaveTransaction}
+              isSavingTransaction={isSavingTransaction}
               stockLogs={stockLogs}
               productNameById={productNameById}
               formatDateTime={formatDateTime}
