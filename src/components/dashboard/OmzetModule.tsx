@@ -1,4 +1,7 @@
-﻿import type { Transaction } from "@/types/pos";
+﻿import { useState, useEffect } from "react";
+import type { Transaction } from "@/types/pos";
+import dashboardService from "@/services/dashboardService";
+import { useAPI, API_ERROR_MESSAGES } from "@/utils/config";
 
 interface WeeklyPoint {
   label: string;
@@ -6,34 +9,62 @@ interface WeeklyPoint {
 }
 
 interface OmzetModuleProps {
-  todayTransactionsCount: number;
-  todayRevenue: number;
-  topProduct: string;
-  weeklyTrend: WeeklyPoint[];
-  maxWeeklyTotal: number;
-  latestTransactions: Transaction[];
-  totalRevenue: number;
-  averageOrder: number;
-  totalTransactions: number;
+  todayTransactionsCount?: number;
+  todayRevenue?: number;
+  topProduct?: string;
+  weeklyTrend?: WeeklyPoint[];
+  maxWeeklyTotal?: number;
+  latestTransactions?: Transaction[];
+  totalRevenue?: number;
+  averageOrder?: number;
+  totalTransactions?: number;
   currency: (value: number) => string;
   formatDateTime: (value: string) => string;
+  isLoading?: boolean;
+  error?: string;
 }
 
 export function OmzetModule({
-  todayTransactionsCount,
-  todayRevenue,
-  topProduct,
-  weeklyTrend,
-  maxWeeklyTotal,
-  latestTransactions,
-  totalRevenue,
-  averageOrder,
-  totalTransactions,
+  todayTransactionsCount = 0,
+  todayRevenue = 0,
+  topProduct = "-",
+  weeklyTrend = [],
+  maxWeeklyTotal = 0,
+  latestTransactions = [],
+  totalRevenue = 0,
+  averageOrder = 0,
+  totalTransactions = 0,
   currency,
   formatDateTime,
+  isLoading = false,
+  error,
 }: OmzetModuleProps) {
   const cardClass = "rounded-2xl border border-[var(--card-border)] bg-white/90 p-5 shadow-sm shadow-[#5e8c520a]";
   const softCardClass = "rounded-2xl border border-[var(--card-border)] bg-[var(--color-secondary)]/20 p-5 shadow-sm shadow-[#5e8c520a]";
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent"></div>
+          <p className="text-sm text-[var(--text-muted)]">Memuat data dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <div className="text-center">
+          <p className="text-sm font-medium text-red-800">❌ {error}</p>
+          <p className="mt-1 text-xs text-red-600">Tidak dapat memuat data dashboard. Silakan coba lagi nanti.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <>
       <section className="grid gap-4 md:grid-cols-3">

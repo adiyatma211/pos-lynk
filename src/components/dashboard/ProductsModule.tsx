@@ -17,6 +17,8 @@ interface ProductsModuleProps {
   editingProductId: string | null;
   categoryForm: { name: string };
   editingCategoryId: string | null;
+  isLoading?: boolean;
+  error?: string;
   setProductFilter: Dispatch<SetStateAction<string>>;
   setProductSearch: Dispatch<SetStateAction<string>>;
   setProductForm: Dispatch<
@@ -41,14 +43,16 @@ interface ProductsModuleProps {
 }
 
 export function ProductsModule({
-  categories,
-  filteredProducts,
+  categories,  // Use the original prop name
+  filteredProducts,  // Use the original prop name
   productFilter,
   productSearch,
   productForm,
   editingProductId,
   categoryForm,
   editingCategoryId,
+  isLoading = false,
+  error,
   setProductFilter,
   setProductSearch,
   setProductForm,
@@ -63,6 +67,42 @@ export function ProductsModule({
   handleDeleteCategory,
   currency,
 }: ProductsModuleProps) {
+  // Defensive programming: ensure categories and filteredProducts are always arrays
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
+  // Filter products based on props - don't add fallback data
+  const safeFilteredProducts = Array.isArray(filteredProducts) ? filteredProducts.filter((product) => {
+    // Handle empty categoryId consistently with page.tsx
+    const productCategoryId = product.categoryId || "";
+    const matchCategory = productFilter === "all" || productCategoryId === productFilter;
+    const matchSearch = productSearch === "" || product.name.toLowerCase().includes(productSearch.toLowerCase());
+    return matchCategory && matchSearch;
+  }) : [];
+
+  // Debug logging (remove in production)
+  if (typeof window !== 'undefined') {
+    console.log('ProductsModule Debug:', {
+      productFilter,
+      productSearch,
+      totalProducts: filteredProducts?.length || 0,
+      filteredCount: safeFilteredProducts.length,
+      categoriesCount: safeCategories.length,
+      sampleProduct: filteredProducts?.[0],
+      categories: safeCategories.map(c => ({ id: c.id, name: c.name }))
+    });
+  }
+  // Error display
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <div className="text-center">
+          <p className="text-sm font-medium text-red-800">❌ {error}</p>
+          <p className="mt-1 text-xs text-red-600">Tidak dapat memuat data produk. Silakan coba lagi nanti.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="rounded-3xl border border-[var(--card-border)] bg-white/90 p-6 shadow-lg shadow-[#5e8c520a]">
@@ -73,12 +113,12 @@ export function ProductsModule({
           </div>
           <div className="flex flex-wrap gap-2">
             <select
-              className="rounded-xl border border-[var(--card-border)] bg-white/80 px-3 py-1.5 text-sm text-[var(--text-muted)]"
+              className="rounded-xl border border-[var(--card-border)] bg-white/80 px-3 py-1.5 text-sm text-[var(--text-muted)] hover:border-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none cursor-pointer transition-colors"
               value={productFilter}
               onChange={(event) => setProductFilter(event.target.value)}
             >
               <option value="all">Semua Kategori</option>
-              {categories.map((category) => (
+              {safeCategories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -95,8 +135,8 @@ export function ProductsModule({
         </div>
 
         <div className="mt-4 grid gap-3">
-          {filteredProducts.length === 0 && <p className="text-sm text-[var(--text-muted)]">Belum ada produk.</p>}
-          {filteredProducts.map((product) => (
+          {safeFilteredProducts.length === 0 && <p className="text-sm text-[var(--text-muted)]">Belum ada produk.</p>}
+          {safeFilteredProducts.map((product) => (
             <div
               key={product.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--card-border)] bg-[var(--color-secondary)]/20 p-3"
@@ -113,7 +153,7 @@ export function ProductsModule({
                   <p className="font-medium text-[var(--foreground)]">{product.name}</p>
                   <p className="text-sm text-[var(--text-muted)]">{currency(product.price)}</p>
                   <p className="text-xs text-[color:rgba(95,109,82,0.75)]">
-                    Stok: {product.stock} - {categories.find((category) => category.id === product.categoryId)?.name ?? "-"}
+                    Stok: {product.stock} - {safeCategories.find((category) => category.id === product.categoryId)?.name ?? "-"}
                   </p>
                 </div>
               </div>
@@ -182,7 +222,7 @@ export function ProductsModule({
               value={productForm.categoryId}
               onChange={(event) => setProductForm((prev) => ({ ...prev, categoryId: event.target.value }))}
             >
-              {categories.map((category) => (
+              {safeCategories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -236,7 +276,7 @@ export function ProductsModule({
             </button>
           </div>
           <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
-            {categories.map((category) => (
+            {safeCategories.map((category) => (
               <div
                 key={category.id}
                 className="flex items-center justify-between rounded-xl border border-[var(--card-border)] bg-[var(--color-secondary)]/25 px-3 py-2 text-sm"
@@ -246,7 +286,7 @@ export function ProductsModule({
                   <button type="button" className="font-semibold text-[var(--color-primary)]" onClick={() => handleEditCategory(category.id)}>
                     Edit
                   </button>
-                  {categories.length > 1 && (
+                  {safeCategories.length > 1 && (
                     <button type="button" className="text-red-500" onClick={() => handleDeleteCategory(category.id)}>
                       Hapus
                     </button>

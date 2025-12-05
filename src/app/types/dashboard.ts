@@ -1,6 +1,6 @@
 ﻿import type { ReactNode } from "react";
 
-export type ModuleKey = "omzet" | "produk" | "transaksi" | "laporan";
+export type ModuleKey = "omzet" | "produk" | "transaksi" | "nota" | "laporan";
 
 export type ModuleNavItem = {
   key: ModuleKey;

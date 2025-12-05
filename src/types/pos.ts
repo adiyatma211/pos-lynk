@@ -23,6 +23,7 @@ export type TransactionItem = {
 
 export type Transaction = {
   id: string;
+  referenceId?: number;  // Database ID from backend
   createdAt: string;
   items: TransactionItem[];
   subtotal: number;

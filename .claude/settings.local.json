@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm run dev)",
+      "Bash(tasklist:*)",
+      "Bash(npm install lucide-react)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd:*)",
+      "Bash(mv:*)",
+      "Bash(composer install:*)",
+      "Bash(composer require:*)",
+      "Bash(php artisan migrate:*)",
+      "Bash(php artisan tinker:*)",
+      "Bash(php artisan storage:link:*)",
+      "Bash(php artisan serve:*)",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
