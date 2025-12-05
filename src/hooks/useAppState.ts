@@ -6,6 +6,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useStockLogs } from "@/hooks/useStockLogs";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useAPI } from "@/utils/config";
 
 export interface CategoryForm {
@@ -85,6 +86,9 @@ export const useAppState = () => {
 
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
   const { data: apiStockLogs, isLoading: stockLogsLoading, error: stockLogsError } = useStockLogs();
+  
+  // Import and use transactions hook
+  const { data: apiTransactions, isLoading: transactionsLoading, error: transactionsError, refetch: refetchTransactions } = useTransactions();
 
   // Local State
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
@@ -127,6 +131,7 @@ export const useAppState = () => {
   // Determine which data source to use
   const currentCategories = shouldUseAPI ? apiCategories : localCategories;
   const currentProducts = shouldUseAPI ? apiProducts : localProducts;
+  const currentTransactions = shouldUseAPI ? apiTransactions : localTransactions;
 
   // Initialize local data
   useEffect(() => {
@@ -220,37 +225,35 @@ export const useAppState = () => {
   const todayTransactions = useMemo(() => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return (shouldUseAPI ? [] : localTransactions).filter((trx) => new Date(trx.createdAt) >= startOfDay);
-  }, [localTransactions, shouldUseAPI]);
+    return currentTransactions.filter((trx: Transaction) => new Date(trx.createdAt) >= startOfDay);
+  }, [currentTransactions, shouldUseAPI]);
 
   const todayRevenue = useMemo(() => {
-    return todayTransactions.reduce((sum, trx) => sum + trx.total, 0);
+    return todayTransactions.reduce((sum: number, trx: Transaction) => sum + trx.total, 0);
   }, [todayTransactions]);
 
   const filteredTransactions = useMemo(() => {
-    const transactions = shouldUseAPI ? [] : localTransactions;
-    return transactions.filter((trx) => {
+    return currentTransactions.filter((trx: Transaction) => {
       if (!dateRange.start && !dateRange.end) return true;
       const trxDate = new Date(trx.createdAt).setHours(0, 0, 0, 0);
       const startDate = dateRange.start ? new Date(dateRange.start).setHours(0, 0, 0, 0) : -Infinity;
       const endDate = dateRange.end ? new Date(dateRange.end).setHours(0, 0, 0, 0) : Infinity;
       return trxDate >= startDate && trxDate <= endDate;
     });
-  }, [localTransactions, dateRange, shouldUseAPI]);
+  }, [currentTransactions, dateRange, shouldUseAPI]);
 
   const selectedTransaction = useMemo(
-    () => (shouldUseAPI ? [] : localTransactions).find((trx) => trx.id === selectedTransactionId) ?? null,
-    [localTransactions, selectedTransactionId, shouldUseAPI],
+    () => currentTransactions.find((trx: Transaction) => trx.id === selectedTransactionId) ?? null,
+    [currentTransactions, selectedTransactionId, shouldUseAPI],
   );
 
-  const latestTransactions = useMemo(() => (shouldUseAPI ? [] : localTransactions).slice(0, 5), [localTransactions, shouldUseAPI]);
+  const latestTransactions = useMemo(() => currentTransactions.slice(0, 5), [currentTransactions, shouldUseAPI]);
 
-  const totalRevenue = useMemo(() => (shouldUseAPI ? [] : localTransactions).reduce((sum, trx) => sum + trx.total, 0), [localTransactions, shouldUseAPI]);
+  const totalRevenue = useMemo(() => currentTransactions.reduce((sum: number, trx: Transaction) => sum + trx.total, 0), [currentTransactions, shouldUseAPI]);
 
   const averageOrder = useMemo(() => {
-    const transactions = shouldUseAPI ? [] : localTransactions;
-    return transactions.length ? totalRevenue / transactions.length : 0;
-  }, [localTransactions, totalRevenue, shouldUseAPI]);
+    return currentTransactions.length ? totalRevenue / currentTransactions.length : 0;
+  }, [currentTransactions, totalRevenue, shouldUseAPI]);
 
   // Actions
   const triggerFlash = useCallback((type: FlashMessage["type"], text: string) => {
@@ -299,13 +302,13 @@ export const useAppState = () => {
     // Data
     categories: currentCategories,
     products: currentProducts,
-    transactions: shouldUseAPI ? [] : localTransactions,
+    transactions: currentTransactions,
     stockLogs: shouldUseAPI ? apiStockLogs : localStockLogs,
 
     // Dashboard data
     dashboardData,
-    isLoading: dashboardLoading || categoriesLoading || productsLoading || stockLogsLoading,
-    error: dashboardError || categoriesError || productsError || stockLogsError,
+    isLoading: dashboardLoading || categoriesLoading || productsLoading || stockLogsLoading || transactionsLoading,
+    error: dashboardError || categoriesError || productsError || stockLogsError || transactionsError,
 
     // UI State
     isReady,
@@ -372,5 +375,6 @@ export const useAppState = () => {
     // API actions
     refetchCategories,
     refetchProducts,
+    refetchTransactions,
   };
 };

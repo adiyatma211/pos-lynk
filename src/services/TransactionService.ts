@@ -47,6 +47,9 @@ export interface TransactionResponse {
   itemCount: number;
   createdAt: string;
   items?: TransactionItemResponse[];
+  hasReceipt?: boolean;
+  receiptGeneratedAt?: string | null;
+  receiptDownloadUrl?: string | null;
 }
 
 class TransactionService {
@@ -74,6 +77,9 @@ class TransactionService {
       total: backendTransaction.total,
       paid: backendTransaction.paid,
       change: backendTransaction.change,
+      hasReceipt: backendTransaction.hasReceipt || false,
+      receiptGeneratedAt: backendTransaction.receiptGeneratedAt || null,
+      receiptDownloadUrl: backendTransaction.receiptDownloadUrl || null,
     };
   }
 
@@ -90,6 +96,8 @@ class TransactionService {
     end_date?: string;
     limit?: number;
     per_page?: number;
+    search?: string;
+    has_receipt?: boolean;
   }): Promise<Transaction[]> {
     if (this.shouldUseAPI()) {
       try {
@@ -109,6 +117,12 @@ class TransactionService {
         }
         if (params?.per_page) {
           searchParams.append('per_page', params.per_page.toString());
+        }
+        if (params?.search) {
+          searchParams.append('search', params.search);
+        }
+        if (params?.has_receipt !== undefined) {
+          searchParams.append('has_receipt', params.has_receipt.toString());
         }
 
         const url = searchParams.toString() ? `${this.endpoint}?${searchParams}` : this.endpoint;
@@ -241,6 +255,9 @@ class TransactionService {
           total: data.total,
           paid: data.paid,
           change: data.change,
+          hasReceipt: false,
+          receiptGeneratedAt: null,
+          receiptDownloadUrl: null,
         };
 
         await this.saveTransactionLocally(newTransaction, data.items);
@@ -248,22 +265,23 @@ class TransactionService {
         showToast.success("Transaksi tersimpan");
         return newTransaction;
       }
-    } catch (error: any) {
-      console.log('[TransactionService] Transaction failed:', error?.message || error);
+    } catch (error: unknown) {
+      console.log('[TransactionService] Transaction failed:', error instanceof Error ? error.message : error);
 
       let errorMessage = 'Gagal menyimpan transaksi';
       let errorDescription = '';
 
-      if (error && error.data) {
+      if (error && typeof error === 'object' && 'data' in error) {
+        const errorObj = error as { data?: { message?: string; errors?: Record<string, string | string[]> } };
         // Handle API validation errors (like stock validation)
-        if (error.data.message) {
-          errorMessage = error.data.message;
+        if (errorObj.data?.message) {
+          errorMessage = errorObj.data.message;
         }
 
         // Handle Laravel validation errors
-        if (error.data.errors) {
+        if (errorObj.data?.errors) {
           const validationErrors = [];
-          for (const [field, messages] of Object.entries(error.data.errors)) {
+          for (const [field, messages] of Object.entries(errorObj.data.errors)) {
             if (Array.isArray(messages)) {
               validationErrors.push(...messages);
             } else if (typeof messages === 'string') {
@@ -274,7 +292,7 @@ class TransactionService {
             errorDescription = validationErrors.join(', ');
           }
         }
-      } else if (error && error.message) {
+      } else if (error instanceof Error && error.message) {
         errorMessage = error.message;
       }
 

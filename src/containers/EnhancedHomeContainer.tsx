@@ -49,6 +49,7 @@ export function EnhancedHomeContainer() {
     products,
     stockLogs,
     dashboardData,
+    transactions, // Add transactions from useAppState
     error: appError,
     // Forms
     categoryForm,
@@ -330,7 +331,7 @@ export function EnhancedHomeContainer() {
 
   // Generate comprehensive report data
   const reportData = DataTransformationUtils.generateSalesReport(
-    shouldUseAPI ? [] : localTransactions,
+    transactions,
     products,
     categories
   );
@@ -407,7 +408,7 @@ export function EnhancedHomeContainer() {
   };
 
   // Generate receipt
-  const handleGenerateReceipt = (transaction: any) => {
+  const handleGenerateReceipt = (transaction: Transaction) => {
     receiptService.generateReceipt({
       transaction
     }).catch(err => {
@@ -417,7 +418,7 @@ export function EnhancedHomeContainer() {
   };
 
   // Share via WhatsApp
-  const handleShareWhatsApp = (transaction: any) => {
+  const handleShareWhatsApp = (transaction: Transaction) => {
     TransactionService.shareTransactionWhatsApp(transaction);
   };
 
@@ -477,7 +478,7 @@ export function EnhancedHomeContainer() {
       topProduct: shouldUseAPI && dashboardData ? dashboardData.topProduct : reportData.topSellingProduct,
       weeklyTrend: shouldUseAPI && dashboardData ? dashboardData.weeklyTrend : reportData.weeklyTrend,
       maxWeeklyTotal: shouldUseAPI && dashboardData ? dashboardData.maxWeeklyTotal : DataTransformationUtils.calculateMaxWeeklyTotal(reportData.weeklyTrend),
-      latestTransactions: shouldUseAPI && dashboardData ? dashboardData.latestTransactions : DataTransformationUtils.getLatestTransactions(shouldUseAPI ? [] : localTransactions),
+      latestTransactions: shouldUseAPI && dashboardData ? dashboardData.latestTransactions : DataTransformationUtils.getLatestTransactions(transactions),
       totalRevenue: shouldUseAPI && dashboardData ? dashboardData.totalRevenue : reportData.totalRevenue,
       averageOrder: shouldUseAPI && dashboardData ? dashboardData.averageOrder : reportData.averageOrderValue,
       totalTransactions: shouldUseAPI && dashboardData ? dashboardData.totalTransactions : reportData.totalTransactions,
@@ -583,6 +584,9 @@ export function EnhancedHomeContainer() {
           total: cartSubtotal,
           paid: paidValue,
           change: paidValue - cartSubtotal,
+          hasReceipt: false,
+          receiptGeneratedAt: null,
+          receiptDownloadUrl: null,
         };
 
         setSummaryModal({ show: true, transaction: newTransaction });
@@ -594,7 +598,7 @@ export function EnhancedHomeContainer() {
     },
 
     receiptsData: {
-      transactions: shouldUseAPI ? [] : localTransactions,
+      transactions: transactions, // Use transactions from useAppState instead of localTransactions
       formatDateTime,
       handleGenerateReceipt,
       handleShareWhatsApp,
@@ -602,7 +606,7 @@ export function EnhancedHomeContainer() {
 
     reportsData: {
       filteredTransactions: DataTransformationUtils.filterTransactionsByDateRange(
-        shouldUseAPI ? [] : localTransactions,
+        transactions,
         dateRange
       ),
       dateRange,

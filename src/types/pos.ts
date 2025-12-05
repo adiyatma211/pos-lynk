@@ -30,6 +30,9 @@ export type Transaction = {
   total: number;
   paid: number;
   change: number;
+  hasReceipt: boolean;
+  receiptGeneratedAt: string | null;
+  receiptDownloadUrl: string | null;
 };
 
 export type StockLog = {
