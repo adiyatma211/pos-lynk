@@ -6,6 +6,7 @@ import ProductService from "@/services/ProductService";
 import TransactionService from "@/services/TransactionService";
 import { useAppState } from "@/hooks/useAppState";
 import type { ModuleNavItem } from "@/app/types/dashboard";
+import type { Transaction } from "@/types/pos";
 import { currency, formatDateTime } from "@/utils/formatHelpers";
 import { receiptService } from "@/services/receiptService";
 import { useAPI } from "@/utils/config";
@@ -440,7 +441,7 @@ export function HomeContainer() {
   };
 
   // Generate receipt
-  const handleGenerateReceipt = (transaction: any) => {
+  const handleGenerateReceipt = (transaction: Transaction) => {
     receiptService.generateReceipt({
       transaction
     }).catch(error => {
@@ -449,7 +450,7 @@ export function HomeContainer() {
   };
 
   // Share via WhatsApp
-  const handleShareWhatsApp = (transaction: any) => {
+  const handleShareWhatsApp = (transaction: Transaction) => {
     TransactionService.shareTransactionWhatsApp(transaction);
   };
 
@@ -626,6 +627,9 @@ export function HomeContainer() {
         total: cartSubtotal,
         paid: paidValue,
         change: paidValue - cartSubtotal,
+        hasReceipt: false,
+        receiptGeneratedAt: null,
+        receiptDownloadUrl: null,
       };
 
       setSummaryModal({ show: true, transaction: newTransaction });

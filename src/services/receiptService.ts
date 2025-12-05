@@ -88,10 +88,14 @@ export class ReceiptService implements IReceiptService {
         transaction: {
           ...transaction,
           id: String(transaction.id),
+          referenceId: typeof transaction.referenceId === 'string' ? parseInt(transaction.referenceId) : transaction.referenceId,
           items: transaction.items.map(item => ({
             ...item,
             productId: item.productId || item.name // Ensure productId exists
-          }))
+          })),
+          hasReceipt: false,
+          receiptGeneratedAt: null,
+          receiptDownloadUrl: null,
         },
         options: options || {} // Use options or empty object
       });

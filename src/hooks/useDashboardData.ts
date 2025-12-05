@@ -48,16 +48,16 @@ export const useDashboardData = () => {
       };
 
       setData(transformedData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Dashboard API error:', err);
-      setError(err.message || 'Gagal memuat data dashboard');
+      setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard');
     } finally {
       setIsLoading(false);
     }
   };
 
   // Helper functions for data transformation
-  const generateWeeklyTrend = (summary: any) => {
+  const generateWeeklyTrend = (summary: { todayRevenue?: number }) => {
     const today = new Date();
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     const weeklyTrend = [];
@@ -78,13 +78,20 @@ export const useDashboardData = () => {
     return weeklyTrend;
   };
 
-  const calculateMaxWeeklyTotal = (summary: any) => {
+  const calculateMaxWeeklyTotal = (summary: { todayRevenue?: number }) => {
     // Use today's revenue as a base for max weekly total
     // In a real implementation, backend should provide actual weekly breakdown
     return Math.max(summary.todayRevenue || 0, 50000); // Minimum 50k or today's revenue
   };
 
-  const transformRecentTransactions = (transactions: any[]) => {
+  const transformRecentTransactions = (transactions: Array<{
+    code: string;
+    createdAt: string;
+    total: number;
+    hasReceipt?: boolean;
+    receiptGeneratedAt?: string | null;
+    receiptDownloadUrl?: string | null;
+  }>) => {
     return transactions.map(trx => ({
       id: trx.code,
       code: trx.code,
@@ -94,6 +101,9 @@ export const useDashboardData = () => {
       total: trx.total,
       paid: trx.total,
       change: 0,
+      hasReceipt: trx.hasReceipt || false,
+      receiptGeneratedAt: trx.receiptGeneratedAt || null,
+      receiptDownloadUrl: trx.receiptDownloadUrl || null,
     }));
   };
 
