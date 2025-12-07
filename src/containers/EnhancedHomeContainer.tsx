@@ -42,6 +42,7 @@ export function EnhancedHomeContainer() {
   ]);
   const [localStockLogs, setLocalStockLogs] = useLocalStorage<StockLog[]>('pos-stock-logs', []);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // App State
   const {
@@ -106,6 +107,21 @@ export function EnhancedHomeContainer() {
       setSelectedTransaction(null);
     }
   }, [selectedTransactionId, shouldUseAPI]);
+
+  // Handle detail modal
+  useEffect(() => {
+    if (selectedTransaction && selectedTransactionId) {
+      setIsDetailModalOpen(true);
+    } else {
+      setIsDetailModalOpen(false);
+    }
+  }, [selectedTransaction, selectedTransactionId]);
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedTransactionId(null);
+    setSelectedTransaction(null);
+  };
 
   // Category Actions with loading states
   const handleCreateCategory = async (name: string) => {
@@ -621,6 +637,15 @@ export function EnhancedHomeContainer() {
     summaryModal,
     confirmSaveTransaction,
     cancelSaveTransaction,
+
+    // Detail modal state
+    selectedTransaction,
+    isDetailModalOpen,
+    handleCloseDetailModal,
+
+    // Receipt and sharing functions
+    handleGenerateReceipt,
+    handleShareWhatsApp,
 
     // Additional utilities
     isInCart,

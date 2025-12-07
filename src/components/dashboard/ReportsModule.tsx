@@ -86,7 +86,11 @@ export function ReportsModule({
                 <td className="px-2 py-3">{currency(transaction.paid)}</td>
                 <td className="px-2 py-3">{currency(transaction.change)}</td>
                 <td className="px-2 py-3 text-right">
-                  <button type="button" className="text-sm text-[var(--color-primary)]" onClick={() => setSelectedTransactionId(transaction.id)}>
+                  <button
+                    type="button"
+                    className="text-sm text-[var(--color-primary)] px-2 py-1 rounded-lg hover:bg-[var(--color-primary)]/10 transition-colors duration-200"
+                    onClick={() => setSelectedTransactionId(transaction.id)}
+                  >
                     Detail
                   </button>
                 </td>
